@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+
+<head>
+    <script type="text/javascript" src="http://d3js.org/d3.v3.min.js"></script>
+    <script type="text/javascript" src="http://code.jquery.com/jquery-1.6.2.min.js"></script> 
+    <script type="text/javascript" src="jquery.tipsy.js"></script>
+    <script src="http://d3js.org/colorbrewer.v1.min.js"></script>
+    <link href="tipsy.css" rel="stylesheet" type="text/css" />
+</head>
+
+<meta charset="utf-8">
+
+<style>
+
+body {
+  font: 10px sans-serif;
+  position: relative;
+  width: 960px;
+}
+
+svg {
+	font: 10px sans-serif;
+	shape-rendering: auto;
+}
+
+rect {
+	fill: none;
+}
+
+.axis path,
+.axis line {
+  fill: none;
+  stroke: #000;
+  shape-rendering: crispEdges;
+}
+
+.dot {
+  stroke: #000;
+}
+
+.overlay {
+  fill: none;
+  pointer-events: all;
+}
+
+button {
+	position: absolute;
+	right: 100px;
+	top: 20px;
+}
+
+</style>
+<button>Reset</button>
+<div id="chart"></div>
+<script type="text/javascript">
+function zoom() {
+	svg.attr("transform", "translate(" + d3.event.translate + ")scale(" + d3.event.scale + ")");
+}
+
+d3.select("button").on("click", reset);
+
+
+var margin = {top: 20, right: 20, bottom: 30, left: 40},
+    width = 960 - margin.left - margin.right,
+    height = 500 - margin.top - margin.bottom;
+
+var x = d3.scale.linear()
+    .range([0, width]);
+
+var r = d3.scale.linear()
+	.range([3,12]);
+
+var colors = d3.scale.ordinal()
+	.domain(['Outlier', 'High Leverage', 'Both'])
+	.range(colorbrewer.Dark2[3]);
+  
+var y = d3.scale.linear()
+    .range([height, 0]);
+
+var xAxis = d3.svg.axis()
+    .scale(x)
+    .orient("bottom")
+
+var yAxis = d3.svg.axis()
+    .scale(y)
+    .orient("left")
+
+var zoom = d3.behavior.zoom()
+	.scaleExtent([1, 10])
+	.on("zoom", zoomed);
+
+var svg = d3.select("body").append("svg")
+    .attr("width", width + margin.left + margin.right)
+    .attr("height", height + margin.top + margin.bottom)
+    .append("g")
+    .attr("transform", "translate(" + margin.left + "," + margin.top + ")")
+    .call(zoom)
+    .append("g")
+
+svg.append("rect")
+	.attr("class", "overlay")
+	.attr("width", width)
+    	.attr("height", height)
+
+function zoomed() {
+	svg.attr("transform", "translate(" + d3.event.translate + ")scale(" + d3.event.scale + ")");
+}
+
+function reset() {
+	svg.attr("transform", "translate(" + margin.left + "," + margin.top + ")")
+	svg.attr("transform", "scale(1)")
+	zoom.scale(1);
+	zoom.translate([0, 0]);
+	d3.transition().duration(500).attr('transform', 'translate(' + zoom.translate() + ') scale(' + zoom.scale() + ')')
+}
+
+
+d3.tsv("data.tsv", function(error, data) {
+  data.forEach(function(d) {
+    d.stdres = +d.stdres;
+    d.lvg = +d.lvg;
+    d.cook = +d.cook;
+    d.lvg_avg = +d.lvg_avg;
+  });
+
+  x.domain(d3.extent(data, function(d) { return d.lvg; })).nice();
+  y.domain(d3.extent(data, function(d) { return d.stdres; })).nice();
+  r.domain(d3.extent(data, function(d) { return d.cook; })).nice();
+
+  var avg_lvg = d3.max(data, function(d) { return d.lvg_avg; });
+
+  svg.append("g")
+      .attr("class", "x axis")
+      .attr("transform", "translate(0," + height + ")")
+      .call(xAxis)
+    .append("text")
+      .attr("class", "label")
+      .attr("x", width)
+      .attr("y", -6)
+      .style("text-anchor", "end")
+      .text("Leverage");
+
+  svg.append("g")
+      .attr("class", "y axis")
+      .call(yAxis)
+    .append("text")
+      .attr("class", "label")
+      .attr("transform", "rotate(-90)")
+      .attr("y", 6)
+      .attr("dy", ".71em")
+      .style("text-anchor", "end")
+      .text("Studentized Residuals")
+  
+  var node = svg.selectAll(".dot")
+      .data(data)
+      .enter()
+      .append("g");
+
+  node.append("circle")
+      .attr("class", "dot")
+      .attr("cx", function(d) { return x(d.lvg); })
+      .attr("cy", function(d) { return y(d.stdres); })
+      .style("fill", function(d) {
+	if ((d.lvg > avg_lvg) && (Math.abs(d.stdres) > 3)) { return colors('Both');}
+	      else if (Math.abs(d.stdres) > 3) { return colors('Outlier');}
+	      else if (d.lvg > avg_lvg) { return colors('High Leverage');}
+	      else { return "black";}
+	      ;})
+      .style("stroke-width", 1)
+      .attr( "fill-opacity", .5 )
+      .attr("r", function(d) {
+	    return r(d.cook);
+      });
+
+$('svg circle').tipsy({ 
+        gravity: 'w', 
+        html: true, 
+        title: function() {
+          var d = this.__data__, c = d.rownum;
+          return 'Row Number: ' + c
+        }
+      });
+
+  var legend = svg.selectAll(".legend")
+      .data(colors.domain())
+    .enter().append("g")
+      .attr("class", "legend")
+      .attr("transform", function(d, i) { return "translate(0," + i * 20 + ")"; });
+
+  legend.append("rect")
+      .attr("x", width - 18)
+      .attr("width", 18)
+      .attr("height", 18)
+      .style("fill", colors)
+      .attr( "fill-opacity", .5 );
+
+    legend.append("text")
+      .attr("x", width - 24)
+      .attr("y", 9)
+      .attr("dy", ".35em")
+      .style("text-anchor", "end")
+      .text(function(d) { return d; });
+});
+
+</script>

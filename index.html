@@ -1,118 +1,12 @@
 <!DOCTYPE html>
-<meta charset="utf-8">
-<style>
-
-path {
-  fill: none;
-  stroke: #000;
-  stroke-linejoin: round;
-  stroke-linecap: round;
-}
-
-div.tooltip {
- position: absolute;
- text-align: center;
- width: 150px;
- height: 35px;
- padding: 2px;
- font-size: 10px;
- background: #FFFFE0;
- border: 1px;
- border-radius: 8px;
- pointer-events: none;
-}
-
-h2 {font-style: italic; font-size: 100%}
-
-</style>
+<html>
+<head>
+  <title> HTML Projects </title>
+</head>
 <body>
-<h1>An Exercise in Making an Interactive D3 Map</h1>
-<h2>Median US News Rankings by State - Please don't take these data as informative</h2>
-<script src="http://d3js.org/d3.v3.min.js"></script>
-<script src="http://d3js.org/topojson.v1.min.js"></script>
-<script src="http://d3js.org/colorbrewer.v1.min.js"></script>
-<script>
 
-var width = 960,
-    height = 600;
+ <a href="./state_map/index.html">D3 State Map</a> 
+ <a href="./leverage_plot/index.html">Leverage Plot</a> 
 
-var num_format = d3.format(",.0f");
-
-var div = d3.select("body").append("div")
- .attr("class", "tooltip")
- .style("opacity", 0);
-
-var path = d3.geo.path()
-    .projection(null);
-
-var svg = d3.select("body").append("svg")
-    .attr("width", width)
-    .attr("height", height);
-
-var color =  d3.scale.quantize().domain([25, 63])
-    .range(colorbrewer.Greens[7]);
-d3.json("states.json", function(error, us) {
-  if (error) return console.error(error);
-
-  svg.append("path")
-      .datum(topojson.mesh(us))
-      .attr("d", path);
-
-
-
- svg.append("g")
- .attr("class", "county")
- .selectAll("path")
- .data(topojson.feature(us, us.objects.states).features)
- .enter().append("path")
- .attr("d", path)
- .style ( "fill" , function (d) {
- return d.properties.rate == null ? "#000000" : color (d.properties.rate);
- }) 
- .style("opacity", 0.8)
- .on("mouseover", function(d) {
- d3.select(this).transition().duration(300).style("opacity", 1);
- div.transition().duration(300)
- .style("opacity", 1)
- div.html(function(x) { return d.properties.cost == null ? 'No Ranked Schools' : 'Median In-State Cost: $' + num_format(d.properties.cost) + " <br/>" + 
-	 "Median Rank: " + num_format(d.properties.rank) + " <br/>" + "Number of Schools: " + d.properties.number;})
- .style("left", (d3.event.pageX) + "px")
- .style("top", (d3.event.pageY -30) + "px");
- })
- .on("mouseout", function() {
- d3.select(this)
- .transition().duration(300)
- .style("opacity", 0.8);
- div.transition().duration(300)
- .style("opacity", 0);
- })
-
-});
-
-var legend = svg.selectAll("g.legend")
- .data(color.range())
- .enter().append("g")
- .attr("class", "legend");
- 
-var ls_w = 20, ls_h = 20;
- 
-legend.append("rect")
- .attr("x", 900)
- .attr("y", function(d, i){ return height - (i*ls_h) - 2*ls_h;})
- .attr("width", ls_w)
- .attr("height", ls_h)
- .style("fill", function(d, i) { return d; })
- .style("opacity", 0.8);
-
-legend.append("text")
- .attr("x", 848)
- .attr("y", height - ls_h - 125)
- .text("Highest");
-
-legend.append("text")
- .attr("x", 850)
- .attr("y", height - ls_h - 5)
- .text("Lowest");
-
-
-</script>
+</body>
+</html>
